@@ -410,8 +410,12 @@ void MTSampler<ModelType>::updateParticle(int thread, int which)
 		&& randomU() <= exp(logH))
 	{
 		// Accept
-		particles[thread][which] = proposal;
-		logL[thread][which] = logL_proposal;
+		auto part_begin_it = particles[thread].begin();
+        particles[thread].erase(part_begin_it + which);
+		particles[thread].emplace(part_begin_it + which, proposal);
+        auto logl_begin_it = logL[thread].begin();
+        logL[thread].erase(logl_begin_it + which);
+        logL[thread].emplace(logl_begin_it + which, logL_proposal);
 		accepted = true;
 	}
 	levels[thread][indices[thread][which]].incrementTries(accepted);
