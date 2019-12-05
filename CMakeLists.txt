@@ -18,7 +18,7 @@ endif (NOT CMAKE_BUILD_TYPE)
 message(STATUS "INFO Build is type ${CMAKE_BUILD_TYPE}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/buildflags.in
-        ${CMAKE_BINARY_DIR}/buildflags)
+        ${CMAKE_BINARY_DIR}/buildflags_dnest3)
 
 # Initialize the dependencies to an empty list.
 set (DNEST_DEPS)
@@ -27,6 +27,8 @@ set (DNEST_DEPS)
 #                                                                      BOOST
 # ==========================================================================
 
+set( Boost_USE_MULTITHREADED ON )
+set( Boost_NO_BOOST_CMAKE 1 ) #  Bug where FindBoost replaces the system MT boot with single threaded
 find_package (Boost COMPONENTS thread system iostreams)
 if (Boost_FOUND)
     list (APPEND DNEST_DEPS ${Boost_LIBRARIES})
@@ -84,6 +86,7 @@ set (DNEST_INCLUDES
 )
 
 add_library (dnest3 ${DNEST_SRC})
+add_library (lib::dnest3 ALIAS dnest3)
 target_link_libraries (dnest3 ${DNEST_DEPS})
 
 install (TARGETS dnest3 DESTINATION lib)
