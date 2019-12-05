@@ -9,22 +9,19 @@ set (CMAKE_MACOSX_RPATH TRUE)
 set (CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 set (CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wno-unused-parameter")
-set (CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+# set (CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG -flto -march=native -g -fno-omit-frame-pointer")
+set (CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -flto -march=native -g -fno-omit-frame-pointer")
+set (CMAKE_CXX_FLAGS_DEBUG "-O0 -DNDEBUG -g -fno-omit-frame-pointer")
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "release")
 endif (NOT CMAKE_BUILD_TYPE)
+message(STATUS "INFO Build is type ${CMAKE_BUILD_TYPE}")
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/buildflags.in
+        ${CMAKE_BINARY_DIR}/buildflags)
 
 # Initialize the dependencies to an empty list.
 set (DNEST_DEPS)
-
-# ==========================================================================
-#                                                                        GSL
-# ==========================================================================
-
-find_package (GSL REQUIRED)
-list (APPEND DNEST_DEPS ${GSL_LIBRARIES})
-include_directories (SYSTEM ${GSL_INCLUDES})
 
 # ==========================================================================
 #                                                                      BOOST
@@ -34,15 +31,26 @@ find_package (Boost COMPONENTS thread system iostreams)
 if (Boost_FOUND)
     list (APPEND DNEST_DEPS ${Boost_LIBRARIES})
     include_directories (SYSTEM ${Boost_INCLUDES})
+    message(STATUS "INFO Boost libraries found. Building DNest3 w/ libboost.")
 
     # try and find zlib if available
     find_package (ZLIB)
     if (ZLIB_FOUND)
         add_definitions (-DDNest3_zlib)
+	message(STATUS "INFO ZLib found. Building DNest3 w/ ZLib.")
     endif (ZLIB_FOUND)
 else (Boost_FOUND)
+	message(STATUS "WARNING WARNING Boost libraries were NOT found. Non-boost version will be compiled. May have problems.")
     add_definitions (-DDNest3_No_Boost)
 endif (Boost_FOUND)
+
+# ==========================================================================
+#                                                                        GSL
+# ==========================================================================
+
+find_package (GSL REQUIRED)
+list (APPEND DNEST_DEPS ${GSL_LIBRARIES})
+include_directories (SYSTEM ${GSL_INCLUDES})
 
 # ==========================================================================
 #                                                                THE LIBRARY
@@ -81,6 +89,9 @@ target_link_libraries (dnest3 ${DNEST_DEPS})
 install (TARGETS dnest3 DESTINATION lib)
 install (FILES ${DNEST_INCLUDES} DESTINATION include/dnest3)
 
+
+# DELETEME
+RETURN()
 # ==========================================================================
 #                                                               THE EXAMPLES
 # ==========================================================================
