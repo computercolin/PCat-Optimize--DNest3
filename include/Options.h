@@ -48,6 +48,7 @@ class Options
 		double lambda, beta;
 		int maxNumSamples;
 
+    protected:
 		// Filenames
 		std::string sampleFile;
 		std::string sampleInfoFile;
