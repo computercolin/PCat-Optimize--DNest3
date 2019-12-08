@@ -390,14 +390,11 @@ void MTSampler<ModelType>::saveLevels() const
 template<class ModelType>
 void MTSampler<ModelType>::updateParticle(int thread, int which)
 {
-    auto part_begin_it = particles[thread].begin();
-    auto logl_begin_it = logL[thread].begin();
-
     // Copy the particle
-    particles[thread].insert(part_begin_it + which +1, particles[thread][which]);
-	ModelType& proposal = particles[thread][which +1];
-    logL[thread].insert(logl_begin_it + which + 1, logL[thread][which]);
-	LikelihoodType& logL_proposal = logL[thread][which +1];
+    particles[thread].push_back(particles[thread][which]);
+	ModelType& proposal = particles[thread].back();
+    logL[thread].push_back(logL[thread][which]);
+	LikelihoodType& logL_proposal = logL[thread].back();
 
 	// Perturb the proposal particle
 	double logH = 0.;
@@ -411,21 +408,17 @@ void MTSampler<ModelType>::updateParticle(int thread, int which)
 		logH = 0.;
 
 	bool accepted = false;
-    part_begin_it = particles[thread].begin();
-    logl_begin_it = logL[thread].begin();
 	if(levels[thread][indices[thread][which]].get_cutoff() < logL_proposal
 		&& randomU() <= exp(logH))
 	{
 		// Accept
-        particles[thread].erase(part_begin_it + which);
-        logL[thread].erase(logl_begin_it + which);
+		std::swap(particles[thread][which], proposal);
+		std::swap(logL[thread][which], logL_proposal);
 		accepted = true;
 	}
-	else {
-        particles[thread].erase(part_begin_it + which +1);
-        logL[thread].erase(logl_begin_it + which +1);
-	}
-	levels[thread][indices[thread][which]].incrementTries(accepted);
+    particles[thread].pop_back();
+    logL[thread].pop_back();
+    levels[thread][indices[thread][which]].incrementTries(accepted);
 }
 
 template<class ModelType>
