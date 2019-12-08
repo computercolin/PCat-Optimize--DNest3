@@ -40,8 +40,8 @@ MTSampler<ModelType>::MTSampler(int numThreads, double compression, const Option
 ,numThreads(numThreads)
 ,compression(compression)
 ,options(options)
-,particles(numThreads, std::vector<ModelType>(options.numParticles))
-,logL(numThreads, std::vector<LikelihoodType>(options.numParticles))
+,particles(numThreads, std::vector<ModelType>(options.numParticles +1))
+,logL(numThreads, std::vector<LikelihoodType>(options.numParticles +1))
 ,indices(numThreads, std::vector<int>(options.numParticles, 0))
 ,levels(numThreads, std::vector<Level>(1, Level(0., -1E300, 0.)))
 ,logLKeep(numThreads)
@@ -391,9 +391,11 @@ template<class ModelType>
 void MTSampler<ModelType>::updateParticle(int thread, int which)
 {
     // Copy the particle
-    particles[thread].push_back(particles[thread][which]);
+    int particleTmpInd = particles[thread].size() -1;
+    particles[thread][particleTmpInd] = particles[thread][which];
 	ModelType& proposal = particles[thread].back();
-    logL[thread].push_back(logL[thread][which]);
+	int loglTmpInd = logL[thread].size() -1;
+	logL[thread][loglTmpInd] = logL[thread][which];
 	LikelihoodType& logL_proposal = logL[thread].back();
 
 	// Perturb the proposal particle
@@ -416,8 +418,6 @@ void MTSampler<ModelType>::updateParticle(int thread, int which)
 		std::swap(logL[thread][which], logL_proposal);
 		accepted = true;
 	}
-    particles[thread].pop_back();
-    logL[thread].pop_back();
     levels[thread][indices[thread][which]].incrementTries(accepted);
 }
 
