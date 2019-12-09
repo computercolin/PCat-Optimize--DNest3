@@ -40,8 +40,8 @@ MTSampler<ModelType>::MTSampler(int numThreads, double compression, const Option
 ,numThreads(numThreads)
 ,compression(compression)
 ,options(options)
-,particles(numThreads, std::vector<ModelType>(options.numParticles))
-,logL(numThreads, std::vector<LikelihoodType>(options.numParticles))
+,particles(numThreads, std::vector<ModelType *>(options.numParticles +1))
+,logL(numThreads, std::vector<LikelihoodType>(options.numParticles +1))
 ,indices(numThreads, std::vector<int>(options.numParticles, 0))
 ,levels(numThreads, std::vector<Level>(1, Level(0., -1E300, 0.)))
 ,logLKeep(numThreads)
@@ -52,14 +52,22 @@ MTSampler<ModelType>::MTSampler(int numThreads, double compression, const Option
 ,deletions(0)
 ,cont(true)
 {
-	for(int i=0; i<numThreads; i++)
-		logLKeep[i].reserve(2*options.newLevelInterval);
+	for(int i=0; i<numThreads; i++) {
+        logLKeep[i].reserve(2 * options.newLevelInterval);
+        for (unsigned long j = 0; j < particles[0].size(); j++) {
+            particles[i][j] = new ModelType;
+        }
+    }
 }
 
 template<class ModelType>
-MTSampler<ModelType>::~MTSampler()
-{
-	delete barrier;
+MTSampler<ModelType>::~MTSampler() {
+    for(int i=0; i<numThreads; i++) {
+        for (int j = 0; j < particles[0].size(); j++) {
+            delete particles[i][j];
+        }
+    }
+    delete barrier;
 }
 
 template<class ModelType>
@@ -86,9 +94,9 @@ void MTSampler<ModelType>::initialise(int thread)
 	static boost::mutex mutex;
 	for(int i=0; i<options.numParticles; i++)
 	{
-		particles[thread][i].fromPrior();
+		particles[thread][i]->fromPrior();
 		logL[thread][i] = LikelihoodType
-				(particles[thread][i].logLikelihood(), randomU());
+				(particles[thread][i]->logLikelihood(), randomU());
 		logLKeep[thread].push_back(logL[thread][i]);
 	}
 	mutex.lock();
@@ -195,7 +203,7 @@ void MTSampler<ModelType>::shuffle()
 
 
 		// Do the swap
-		ModelType temp1 = particles[i1][j1];
+		ModelType *temp1 = particles[i1][j1];
 		LikelihoodType temp2 = logL[i1][j1];
 		int temp3 = indices[i1][j1];
 
@@ -330,12 +338,12 @@ void MTSampler<ModelType>::saveParticle(int iWhich, int jWhich)
 		if(saves == 1){
 			sout.open(sampleFile.c_str(), std::ios::out);
 			sout<<"# Samples file. One sample per line."<<std::endl;
-			sout<<"# "<<particles[0][0].description()<<std::endl;
+			sout<<"# "<<particles[0][0]->description()<<std::endl;
 		}
 		else
 			sout.open(sampleFile.c_str(), std::ios::out|std::ios::app);
 		sout<<std::setprecision(10);
-		particles[iWhich][jWhich].print(sout); sout<<std::endl;
+		particles[iWhich][jWhich]->print(sout); sout<<std::endl;
 		sout.close();
 #ifdef DNest3_zlib
 	}
@@ -390,31 +398,35 @@ void MTSampler<ModelType>::saveLevels() const
 template<class ModelType>
 void MTSampler<ModelType>::updateParticle(int thread, int which)
 {
-	// Copy the particle
-	ModelType proposal = particles[thread][which];
-	LikelihoodType logL_proposal = logL[thread][which];
+    // Copy the particle
+    ModelType *proposal = new ModelType;
+    *proposal = *(particles[thread][which]);
+    ModelType *trash = proposal;
+    LikelihoodType logL_proposal = logL[thread][which];
 
-	// Perturb the proposal particle
-	double logH = 0.;
+    // Perturb the proposal particle
+    double logH = 0.;
 
-	// Standard Metropolis move
-	logH = proposal.perturb();
-	logL_proposal.logL = proposal.logLikelihood();
-	logL_proposal.tieBreaker += pow(10., 1.5 - 6.*randomU())*randn();
-	logL_proposal.tieBreaker = mod(logL_proposal.tieBreaker, 1.);
-	if(logH > 0.)
-		logH = 0.;
+    // Standard Metropolis move
+    logH = proposal->perturb();
+    logL_proposal.logL = proposal->logLikelihood();
+    logL_proposal.tieBreaker += pow(10., 1.5 - 6.*randomU())*randn();
+    logL_proposal.tieBreaker = mod(logL_proposal.tieBreaker, 1.);
+    if(logH > 0.)
+        logH = 0.;
 
-	bool accepted = false;
-	if(levels[thread][indices[thread][which]].get_cutoff() < logL_proposal
-		&& randomU() <= exp(logH))
-	{
-		// Accept
-		particles[thread][which] = proposal;
-		logL[thread][which] = logL_proposal;
-		accepted = true;
-	}
-	levels[thread][indices[thread][which]].incrementTries(accepted);
+    bool accepted = false;
+    if(levels[thread][indices[thread][which]].get_cutoff() < logL_proposal
+       && randomU() <= exp(logH))
+    {
+        // Accept
+        trash = particles[thread][which];
+        particles[thread][which] = proposal;
+        logL[thread][which] = logL_proposal;
+        accepted = true;
+    }
+    levels[thread][indices[thread][which]].incrementTries(accepted);
+    delete trash;
 }
 
 template<class ModelType>

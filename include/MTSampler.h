@@ -46,7 +46,7 @@ class MTSampler
 		Options options;
 
 		// Stuff pertaining to the particles
-		std::vector< std::vector<ModelType> > particles;
+		std::vector< std::vector<ModelType *> > particles;
 		std::vector< std::vector<LikelihoodType> > logL;
 		std::vector< std::vector<int> > indices;
 
