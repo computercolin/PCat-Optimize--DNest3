@@ -40,7 +40,7 @@ MTSampler<ModelType>::MTSampler(int numThreads, double compression, const Option
 ,numThreads(numThreads)
 ,compression(compression)
 ,options(options)
-,particles(numThreads, std::vector<ModelType *>(options.numParticles))
+,particles(numThreads, std::vector<ModelType *>(options.numParticles +1))
 ,logL(numThreads, std::vector<LikelihoodType>(options.numParticles))
 ,indices(numThreads, std::vector<int>(options.numParticles, 0))
 ,levels(numThreads, std::vector<Level>(1, Level(0., -1E300, 0.)))
@@ -399,9 +399,8 @@ template<class ModelType>
 void MTSampler<ModelType>::updateParticle(int thread, int which)
 {
     // Copy the particle
-    ModelType *proposal = new ModelType;
+    ModelType *proposal = particles[thread][particles[thread].size() -1];
     *proposal = *(particles[thread][which]);
-    ModelType *trash = proposal;
     LikelihoodType logL_proposal = logL[thread][which];
 
     // Perturb the proposal particle
@@ -420,13 +419,12 @@ void MTSampler<ModelType>::updateParticle(int thread, int which)
        && randomU() <= exp(logH))
     {
         // Accept
-        trash = particles[thread][which];
+        particles[thread][particles[thread].size() -1] = particles[thread][which];  // store scratch
         particles[thread][which] = proposal;
         logL[thread][which] = logL_proposal;
         accepted = true;
     }
     levels[thread][indices[thread][which]].incrementTries(accepted);
-    delete trash;
 }
 
 template<class ModelType>
@@ -521,7 +519,7 @@ void MTSampler<ModelType>::deleteParticle()
 						jCopy = randInt(options.numParticles);
 					}while(!good[iCopy][jCopy] || randomU() >= exp(logPush(indices[i][j]) - max_logPush));
 
-					particles[i][j] = particles[iCopy][jCopy];
+                    *(particles[i][j]) = *(particles[iCopy][jCopy]);
 					indices[i][j] = indices[iCopy][jCopy];
 					logL[i][j] = logL[iCopy][jCopy];
 					deletions++;
