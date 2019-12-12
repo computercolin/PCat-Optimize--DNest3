@@ -8,7 +8,7 @@ set (CMAKE_MACOSX_RPATH TRUE)
 
 set (CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-set (CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wno-unused-parameter")
+set (CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wno-unused-parameter -mavx2")
 # set (CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG -flto -march=native -g -fno-omit-frame-pointer")
 set (CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -flto -march=native -g -fno-omit-frame-pointer")
 set (CMAKE_CXX_FLAGS_DEBUG "-O0 -DNDEBUG -g -fno-omit-frame-pointer")
