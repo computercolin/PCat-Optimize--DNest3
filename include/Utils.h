@@ -21,6 +21,7 @@
 #define DNest3_Utils_h
 
 #include <vector>
+#include <boost/align/aligned_allocator.hpp>
 
 namespace DNest3
 {
@@ -32,6 +33,10 @@ double logsumexp(double* logv, int n);
 double logsumexp(const std::vector<double>& logv);
 double logsumexp(double a, double b);
 double logdiffexp(double a, double b);
+
+
+template <typename T>
+using vec_align32 = std::vector<T, boost::alignment::aligned_allocator<T,32>>;
 
 } //namespace DNest3
 
